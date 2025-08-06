@@ -19,33 +19,32 @@
 #'   httr::progress())
 fetch <- function(id, columns = NULL, use.make.names=FALSE, guessEncoding=TRUE, ...) {
   
-  # check that required env variables exist
-  if(!exists("customer", .domo_env) || !exists("auth.token", .domo_env)) {
+  domo_env <- get(".domo_env", envir=asNamespace("DomoR"))
+  
+  # check required env variables
+  if(!exists("customer", domo_env) || !exists("auth.token", domo_env)) {
     stop("Both a customer instance and token are required, please set with 'DomoR::init('customer', 'token')'")
   }
   
-  # if the id is a number, assume it's from a previous list of data sources
   data_source_id <- id
   
   if(is.numeric(id)) {
-    if (!exists('last_data_source_list', .domo_env))
-      stop("no previous run to index into", call. = F)
-    ids <- get('last_data_source_list', .domo_env)
+    if (!exists('last_data_source_list', domo_env))
+      stop("no previous run to index into", call. = FALSE)
+    ids <- domo_env$last_data_source_list
     data_source_id <- ids[[id]]
   }
   
-  get_url <- paste0(.domo_env$customer.url, '/api/data/v2/datasources/', data_source_id, '/dataversions/latest?includeHeader=true')
+  get_url <- paste0(domo_env$customer.url, '/api/data/v2/datasources/', data_source_id, '/dataversions/latest?includeHeader=true')
   
-  all.headers <- httr::add_headers(c(.domo_env$auth.token, .domo_env$user.agent,
-                                     'Accept'='text/csv'))
+  all.headers <- httr::add_headers(c(domo_env$auth.token, domo_env$user.agent, 'Accept'='text/csv'))
   
-  get_result <- httr::GET(get_url, all.headers, .domo_env$config, ...)
-  
-  # handle errors
+  get_result <- httr::GET(get_url, all.headers, domo_env$config, ...)
   httr::stop_for_status(get_result)
   
-  # Guess encoding from raw content, then decode and parse
+  # get raw content
   raw_content <- httr::content(get_result, as = "raw")
+  
   if(guessEncoding){
     guessed <- readr::guess_encoding(raw_content)
     encoding <- ifelse(is.null(guessed), "UTF-8", guessed$encoding[1])
@@ -54,11 +53,9 @@ fetch <- function(id, columns = NULL, use.make.names=FALSE, guessEncoding=TRUE, 
     encoding <- "UTF-8"
   }
   
-  # Read as CSV using readr::read_csv (robust parsing)
   df <- readr::read_csv(raw_content, locale = readr::locale(encoding = encoding), show_col_types = FALSE)
   
   if (!is.null(columns)) {
-    # filter columns (case-insensitive)
     keep <- tolower(names(df)) %in% tolower(columns)
     df <- df[, keep, drop=FALSE]
   }
