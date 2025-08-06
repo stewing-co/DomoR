@@ -17,34 +17,31 @@
 #' df <- DomoR::fetch('4826e3fb-cd23-468d-9aff-96bf5b690247',
 #'   c('accountid', 'lastname', 'startdate'),
 #'   httr::progress())
-fetch <- function(id, columns = NULL, use.make.names=FALSE, guessEncoding=TRUE, ...) {
-  
-  domo_env <- get(".domo_env", envir=asNamespace("DomoR"))
-  
-  # check required env variables
-  if(!exists("customer", domo_env) || !exists("auth.token", domo_env)) {
-    stop("Both a customer instance and token are required, please set with 'DomoR::init('customer', 'token')'")
+# In fetch.R
+# In fetch.R
+fetch <- function(id, columns = NULL, use.make.names=FALSE, guessEncoding=TRUE, buffer_size = 5000000, ...) {
+
+  if (!exists("customer.url", .domo_env)) {
+    stop("Must call DomoR::init() first", call.=FALSE)
   }
-  
-  data_source_id <- id
-  
-  if(is.numeric(id)) {
-    if (!exists('last_data_source_list', domo_env))
-      stop("no previous run to index into", call. = FALSE)
-    ids <- domo_env$last_data_source_list
-    data_source_id <- ids[[id]]
+
+  if (is.numeric(id)) {
+    if (!exists("last_data_source_list", .domo_env)) stop("No list to index", call.=FALSE)
+    data_source_id <- .domo_env$last_data_source_list[[id]]
+  } else {
+    data_source_id <- id
   }
-  
-  get_url <- paste0(domo_env$customer.url, '/api/data/v2/datasources/', data_source_id, '/dataversions/latest?includeHeader=true')
-  
-  all.headers <- httr::add_headers(c(domo_env$auth.token, domo_env$user.agent, 'Accept'='text/csv'))
-  
-  get_result <- httr::GET(get_url, all.headers, domo_env$config, ...)
+
+  get_url <- paste0(.domo_env$customer.url, '/api/data/v2/datasources/',
+                    data_source_id, '/dataversions/latest?includeHeader=true')
+
+  all.headers <- httr::add_headers(c(.domo_env$auth.token, .domo_env$user.agent, 'Accept'='text/csv'))
+
+  get_result <- httr::GET(get_url, all.headers, .domo_env$config, ...)
   httr::stop_for_status(get_result)
-  
-  # get raw content
+
   raw_content <- httr::content(get_result, as = "raw")
-  
+
   if(guessEncoding){
     guessed <- readr::guess_encoding(raw_content)
     encoding <- ifelse(is.null(guessed), "UTF-8", guessed$encoding[1])
@@ -52,17 +49,23 @@ fetch <- function(id, columns = NULL, use.make.names=FALSE, guessEncoding=TRUE, 
   } else {
     encoding <- "UTF-8"
   }
-  
+
+  # Increase buffer size safely around read_csv
+  old_buffer_size <- Sys.getenv("VROOM_CONNECTION_SIZE")
+  on.exit(Sys.setenv(VROOM_CONNECTION_SIZE = old_buffer_size))
+  Sys.setenv(VROOM_CONNECTION_SIZE = buffer_size)
+
   df <- readr::read_csv(raw_content, locale = readr::locale(encoding = encoding), show_col_types = FALSE)
-  
+
   if (!is.null(columns)) {
-    keep <- tolower(names(df)) %in% tolower(columns)
-    df <- df[, keep, drop=FALSE]
+    df <- df[,tolower(names(df)) %in% tolower(columns), drop=FALSE]
   }
-  
+
   if(use.make.names){
     names(df) <- make.names(tolower(names(df)))
   }
-  
+
   return(as.data.frame(df))
 }
+
+

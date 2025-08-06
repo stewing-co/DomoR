@@ -4,7 +4,14 @@
 \alias{fetch}
 \title{Fetch a data source.}
 \usage{
-fetch(id, columns = NULL, use.make.names = FALSE, ...)
+fetch(
+  id,
+  columns = NULL,
+  use.make.names = FALSE,
+  guessEncoding = TRUE,
+  buffer_size = 5e+06,
+  ...
+)
 }
 \arguments{
 \item{id}{A data source id (GUID) or an index from a previous list.}

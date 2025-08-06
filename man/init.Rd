@@ -2,17 +2,21 @@
 % Please edit documentation in R/DomoR.R
 \name{init}
 \alias{init}
-\title{Initialize Domo package}
+\title{Initialize DomoR Package}
 \usage{
 init(customer, token, config = NULL, verbose = FALSE)
 }
 \arguments{
-\item{customer}{The customer ID or base URL.  e.g.  acme.domo.com  or  acme}
+\item{customer}{The customer ID or base URL (e.g., 'acme' or 'acme.domo.com').}
 
-\item{token}{The DEV token required for API access.}
+\item{token}{The developer API token from Domo.}
+
+\item{config}{Optional httr configuration settings.}
+
+\item{verbose}{Logical, enable verbose output.}
 }
 \description{
-Initialize Domo package
+Initializes the connection settings for the DomoR package.
 }
 \examples{
 DomoR::init(Sys.getenv('DOMO_BASE_URL'), Sys.getenv('DEVELOPER_TOKEN'))
