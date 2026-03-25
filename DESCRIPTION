@@ -16,6 +16,5 @@ Imports:
     httr,
     readr,
     jsonlite,
-    pryr,
     dplyr
 RoxygenNote: 7.3.2

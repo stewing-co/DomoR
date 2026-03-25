@@ -71,7 +71,7 @@ replace_ds <- function(data_source_id,data,...) {
 }
 
 estimate_rows <- function (data, kbytes = 10000) {
-  sz <- pryr::object_size(data)
+  sz <- object.size(data)
   targetSize <- kbytes * 3 # compression factor
   if (sz / 1000 > targetSize)
     return(floor(nrow(data)*(targetSize) / (sz/1000)))
